@@ -1,8 +1,8 @@
-const { MongoClient, ObjectID} = require('mongodb');
+const { MongoClient, ObjectID } = require('mongodb');
 
-MongoClient.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017',{ useNewUrlParser: true }, (error, client ) => {
-    
-    if (error){
+MongoClient.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017', { useNewUrlParser: true }, (error, client) => {
+
+    if (error) {
         return console.log('Unable to connect to MongoDb server', error);
     }
     console.log('Successfully connected to mongodb');
@@ -41,8 +41,8 @@ MongoClient.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017',{ use
     // },(error) => {
     //     console.log('error', error);
     // });
-    
-    
+
+
     // Delete documents
 
     // db.collection('Todos')
@@ -61,15 +61,15 @@ MongoClient.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017',{ use
     //     .findOneAndDelete({_id: new ObjectID('5b751437cae8701af382d9f1')})
     //     .then(result => console.log(result));
 
-    
+
     // Update document
     db.collection('Todos')
         .findOneAndUpdate(
-            {_id: new ObjectID('5b7516d8cae8701af382d9f2')},
+            { _id: new ObjectID('5b7516d8cae8701af382d9f2') },
             {
-                $set : {title: 'updated titless'},
+                $set: { title: 'updated titless' },
                 $inc: {
-                    price:  1
+                    price: 1
                 }
             },
             {

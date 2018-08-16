@@ -1,17 +1,19 @@
-var express = require('express');
-var bodyParser = require('body-parser');
-
-var { ObjectID } = require('mongodb');
-// var { mongoose }  =  require('./db/mongoose');
-// var { User }  =  require('./models/user');
-var { Todo } = require('./models/todo');
+const _ = require('lodash');
+const express = require('express');
+const bodyParser = require('body-parser');
 
 
-var app = express();
+const { ObjectID } = require('mongodb');
+// const { mongoose }  =  require('./db/mongoose');
+// const { User }  =  require('./models/user');
+const { Todo } = require('./models/todo');
+
+
+const app = express();
 app.use(bodyParser.json());
 const port = process.env.PORT || 3000;
 app.post('/todos', (req, res) => {
-    var todo = new Todo({
+    const todo = new Todo({
         text: req.body.text
     });
 
@@ -62,12 +64,40 @@ app.delete('/todos/:id', (req, res) => {
     });
 });
 
+app.patch('/todos/:id', (req, res) => {
+    const id = req.params.id;
+    const body = _.pick(req.body, ['text', 'completed']);
+
+    if (!ObjectID.isValid(id)) {
+        res.status(404).send();
+    }
+
+    if (_.isBoolean(body.completed) && body.completed) {
+        body.completedAt = new Date().getTime();
+    } else {
+        body.completedAt = null;
+        body.completed = false;
+    }
+
+    Todo.findByIdAndUpdate(id, { $set: { body } }, { new: true })
+        .then((todo) => {
+            if (!todo) {
+                res.status(404).send();
+            } else {
+                res.send({ todo });
+            }
+        }).catch((e) => {
+            res.status(400).send();
+        });
+});
+
+
 app.listen(port, () => {
     console.log(`Listing at port ${port}`);
 })
 
 
-// var newTodo = Todo({text: "Default todo"});
+// const newTodo = Todo({text: "Default todo"});
 
 // newTodo.save().then((result) => {
 //     console.log('result', JSON.stringify(result, undefined, 2));
@@ -77,7 +107,7 @@ app.listen(port, () => {
 
 
 
-// var User = User({email: "irfanhanfi@gmail.com"});
+// const User = User({email: "irfanhanfi@gmail.com"});
 
 // User.save().then((result) => {
 //     console.log('result', JSON.stringify(result, undefined, 2));

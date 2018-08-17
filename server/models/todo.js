@@ -1,4 +1,4 @@
-var mongoose = require('mongoose');
+const { mongoose }  =  require('../db/mongoose');
 
 // Todo
 var Todo = mongoose.model('Todo', {

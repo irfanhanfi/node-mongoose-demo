@@ -2,12 +2,10 @@ const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
 
-
 const { ObjectID } = require('mongodb');
-// const { mongoose }  =  require('./db/mongoose');
-// const { User }  =  require('./models/user');
+const { User } = require('./models/user');
 const { Todo } = require('./models/todo');
-
+const { authenticate } = require('./middleware/authenticate');
 
 const app = express();
 app.use(bodyParser.json());
@@ -18,7 +16,7 @@ app.post('/todos', (req, res) => {
     });
 
     todo.save().then((result) => {
-        res.status(200).send(result);
+        res.send(result);
     }, (error) => {
         res.status(400).send(error);
     });
@@ -91,6 +89,40 @@ app.patch('/todos/:id', (req, res) => {
         });
 });
 
+app.post('/users', (req, res) => {
+    const body = _.pick(req.body, ['email', 'password']);
+    const user = new User(body);
+    user.save().then(() => {
+        return user.generateAuthToken();
+    }).then((token) => {
+        res.header('x-auth', token).send(user);
+    }).catch((error) => {
+        res.status(400).send(error);
+    });
+});
+
+app.get('/users', (req, res) => {
+    User.find().then((users) => {
+        res.send({ users });
+    }, (error) => {
+        res.status(400).send(error);
+    });
+});
+
+
+
+app.get('/users/me', authenticate, (req, res) => {
+    const token = req.header('x-auth');
+    User.findByToken(token).then((user) => {
+        if (!user) {
+            return Promise.reject();
+        }
+
+        res.send({ user });
+    }).catch((error) => {
+        res.status(401).send(error);
+    });
+});
 
 app.listen(port, () => {
     console.log(`Listing at port ${port}`);

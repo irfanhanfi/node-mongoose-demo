@@ -109,8 +109,6 @@ app.get('/users', (req, res) => {
     });
 });
 
-
-
 app.get('/users/me', authenticate, (req, res) => {
     const token = req.header('x-auth');
     User.findByToken(token).then((user) => {
@@ -122,6 +120,26 @@ app.get('/users/me', authenticate, (req, res) => {
     }).catch((error) => {
         res.status(401).send(error);
     });
+});
+
+app.delete('/users/me/token', authenticate, (req, res) => {
+    req.user.removeToken(req.token).then(() => {
+        res.status(200).send();
+    },() => {
+        res.status(400).send();
+    });
+});
+
+app.post('/users/login', (req, res) => {
+    const body = _.pick(req.body, ['email', 'password']);
+    User.findByCredentials( body.email, body.password)
+        .then((user) => {
+            user.generateAuthToken().then((token) => {
+                res.header('x-auth', token).send();
+            });
+        }).catch((err) => {
+            res.status(400).send();
+        });
 });
 
 app.listen(port, () => {

@@ -1,3 +1,4 @@
+require('./config/config');
 const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -9,12 +10,12 @@ const { authenticate } = require('./middleware/authenticate');
 
 const app = express();
 app.use(bodyParser.json());
-const port = process.env.PORT || 3000;
-app.post('/todos', (req, res) => {
-    const todo = new Todo({
-        text: req.body.text
-    });
 
+app.post('/todos', authenticate, (req, res) => {
+    const todo = new Todo({
+        text: req.body.text,
+        _creator: req.user._id
+    });
     todo.save().then((result) => {
         res.send(result);
     }, (error) => {
@@ -22,36 +23,20 @@ app.post('/todos', (req, res) => {
     });
 });
 
-app.get('/todos/:id', (req, res) => {
-    const id = req.params.id;
-    if (!ObjectID.isValid(id)) {
-        res.status(404).send();
-    }
-    Todo.findById(id).then((todo) => {
-        if (!todo) {
-            res.status(404).send();
-        } else {
-            res.send({ todo });
-        }
-    }, (error) => {
-        res.status(400).send(error);
-    });
-});
-
-app.get('/todos', (req, res) => {
-    Todo.find().then((todos) => {
+app.get('/todos', authenticate, (req, res) => {
+    Todo.find({ _creator: req.user._id }).then((todos) => {
         res.send({ todos });
     }, (error) => {
         res.status(400).send(error);
     });
 });
 
-app.delete('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate, (req, res) => {
     const id = req.params.id;
     if (!ObjectID.isValid(id)) {
         res.status(404).send();
     }
-    Todo.findByIdAndRemove(id).then((todo) => {
+    Todo.findOne({ _id: id, _creator: req.user._id }).then((todo) => {
         if (!todo) {
             res.status(404).send();
         } else {
@@ -62,7 +47,23 @@ app.delete('/todos/:id', (req, res) => {
     });
 });
 
-app.patch('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
+    const id = req.params.id;
+    if (!ObjectID.isValid(id)) {
+        res.status(404).send();
+    }
+    Todo.findOneAndRemove({ _id: id, _creator: req.user._id }).then((todo) => {
+        if (!todo) {
+            res.status(404).send();
+        } else {
+            res.send({ todo });
+        }
+    }, (error) => {
+        res.status(400).send(error);
+    });
+});
+
+app.patch('/todos/:id', authenticate, (req, res) => {
     const id = req.params.id;
     const body = _.pick(req.body, ['text', 'completed']);
 
@@ -77,7 +78,7 @@ app.patch('/todos/:id', (req, res) => {
         body.completed = false;
     }
 
-    Todo.findByIdAndUpdate(id, { $set: { body } }, { new: true })
+    Todo.findOneAndUpdate({ _id: id, _creator: req.user._id }, { $set: body }, { new: true })
         .then((todo) => {
             if (!todo) {
                 res.status(404).send();
@@ -97,6 +98,7 @@ app.post('/users', (req, res) => {
     }).then((token) => {
         res.header('x-auth', token).send(user);
     }).catch((error) => {
+        console.log('error',error)
         res.status(400).send(error);
     });
 });
@@ -125,14 +127,14 @@ app.get('/users/me', authenticate, (req, res) => {
 app.delete('/users/me/token', authenticate, (req, res) => {
     req.user.removeToken(req.token).then(() => {
         res.status(200).send();
-    },() => {
+    }, () => {
         res.status(400).send();
     });
 });
 
 app.post('/users/login', (req, res) => {
     const body = _.pick(req.body, ['email', 'password']);
-    User.findByCredentials( body.email, body.password)
+    User.findByCredentials(body.email, body.password)
         .then((user) => {
             user.generateAuthToken().then((token) => {
                 res.header('x-auth', token).send();
@@ -142,8 +144,8 @@ app.post('/users/login', (req, res) => {
         });
 });
 
-app.listen(port, () => {
-    console.log(`Listing at port ${port}`);
+app.listen(process.env.PORT, () => {
+    console.log(`Listing at port ${process.env.PORT}`);
 })
 
 
